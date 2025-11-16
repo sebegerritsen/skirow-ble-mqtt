@@ -1,6 +1,6 @@
 # SkiRow BLE to MQTT Bridge
 
-ESP32-based bridge that connects SkiRow (and other FTMS-compatible) rowing machines to Home Assistant via MQTT. Built this out of annoyance that there are very few apps that work with Ski-Row devices (mine is the Ski-Row Air from Energyfit). I have built this with a Lora32 (with a tiny screen). but will likely work with any other ESP32 device. 
+ESP32-based bridge that connects Ski-Row (and other FTMS-compatible) rowing machines to Home Assistant via MQTT. Built this out of annoyance that there are very few apps that work with Ski-Row devices (mine is the Ski-Row Air from Energyfit). I have built this with a Lora32 (with a tiny screen). but will likely work with any other ESP32 device. 
 
 ## Features
 
