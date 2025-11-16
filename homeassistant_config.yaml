@@ -1,0 +1,177 @@
+# Home Assistant MQTT Sensor Configuration for SkiRow
+# Add this to your configuration.yaml or sensors.yaml file
+
+mqtt:
+  sensor:
+    # Stroke Rate (SPM - Strokes Per Minute)
+    - name: "SkiRow Stroke Rate"
+      unique_id: "skirow_stroke_rate"
+      state_topic: "rowing/stroke_rate"
+      unit_of_measurement: "SPM"
+      icon: "mdi:rowing"
+      state_class: "measurement"
+      availability_topic: "rowing/status"
+      payload_available: "online"
+      payload_not_available: "offline"
+
+    # Distance in meters
+    - name: "SkiRow Distance"
+      unique_id: "skirow_distance"
+      state_topic: "rowing/distance"
+      unit_of_measurement: "m"
+      icon: "mdi:map-marker-distance"
+      state_class: "total_increasing"
+      device_class: "distance"
+      availability_topic: "rowing/status"
+      payload_available: "online"
+      payload_not_available: "offline"
+
+    # Power in watts
+    - name: "SkiRow Power"
+      unique_id: "skirow_power"
+      state_topic: "rowing/power"
+      unit_of_measurement: "W"
+      icon: "mdi:lightning-bolt"
+      state_class: "measurement"
+      device_class: "power"
+      availability_topic: "rowing/status"
+      payload_available: "online"
+      payload_not_available: "offline"
+
+    # Speed in m/s
+    - name: "SkiRow Speed"
+      unique_id: "skirow_speed"
+      state_topic: "rowing/speed"
+      unit_of_measurement: "m/s"
+      icon: "mdi:speedometer"
+      state_class: "measurement"
+      availability_topic: "rowing/status"
+      payload_available: "online"
+      payload_not_available: "offline"
+
+    # Calories burned
+    - name: "SkiRow Calories"
+      unique_id: "skirow_calories"
+      state_topic: "rowing/calories"
+      unit_of_measurement: "kcal"
+      icon: "mdi:fire"
+      state_class: "total_increasing"
+      availability_topic: "rowing/status"
+      payload_available: "online"
+      payload_not_available: "offline"
+
+    # Elapsed Time in seconds
+    - name: "SkiRow Time"
+      unique_id: "skirow_time"
+      state_topic: "rowing/time"
+      unit_of_measurement: "s"
+      icon: "mdi:timer"
+      state_class: "total_increasing"
+      device_class: "duration"
+      availability_topic: "rowing/status"
+      payload_available: "online"
+      payload_not_available: "offline"
+
+    # Heart Rate
+    - name: "SkiRow Heart Rate"
+      unique_id: "skirow_heart_rate"
+      state_topic: "rowing/heart_rate"
+      unit_of_measurement: "bpm"
+      icon: "mdi:heart-pulse"
+      state_class: "measurement"
+      availability_topic: "rowing/status"
+      payload_available: "online"
+      payload_not_available: "offline"
+
+  binary_sensor:
+    # Connection Status
+    - name: "SkiRow Connection"
+      unique_id: "skirow_connection"
+      state_topic: "rowing/status"
+      payload_on: "online"
+      payload_off: "offline"
+      device_class: "connectivity"
+      icon: "mdi:connection"
+
+# Optional: Template sensors for better formatting
+template:
+  - sensor:
+      # Format time as HH:MM:SS
+      - name: "SkiRow Time Formatted"
+        unique_id: "skirow_time_formatted"
+        state: >
+          {% set t = states('sensor.skirow_time') | int(0) %}
+          {% set hours = (t // 3600) %}
+          {% set minutes = ((t % 3600) // 60) %}
+          {% set seconds = (t % 60) %}
+          {{ '%02d:%02d:%02d' | format(hours, minutes, seconds) }}
+        icon: "mdi:clock-outline"
+
+      # Format distance in km for longer workouts
+      - name: "SkiRow Distance (km)"
+        unique_id: "skirow_distance_km"
+        state: >
+          {{ (states('sensor.skirow_distance') | float(0) / 1000) | round(2) }}
+        unit_of_measurement: "km"
+        icon: "mdi:map-marker-distance"
+
+      # Calculate pace (min/500m) - common rowing metric
+      - name: "SkiRow Pace (500m)"
+        unique_id: "skirow_pace_500m"
+        state: >
+          {% set speed = states('sensor.skirow_speed') | float(0) %}
+          {% if speed > 0 %}
+            {% set pace_seconds = 500 / speed %}
+            {% set minutes = (pace_seconds // 60) | int %}
+            {% set seconds = (pace_seconds % 60) | int %}
+            {{ '%d:%02d' | format(minutes, seconds) }}
+          {% else %}
+            0:00
+          {% endif %}
+        icon: "mdi:run-fast"
+
+# Optional: Automation example - notify when workout is complete
+automation:
+  - alias: "SkiRow Workout Complete Notification"
+    trigger:
+      - platform: state
+        entity_id: sensor.skirow_stroke_rate
+        to: "0"
+        for:
+          minutes: 2
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.skirow_distance
+        above: 100  # At least 100m rowed
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "Rowing Workout Complete!"
+          message: >
+            Great job! You rowed {{ states('sensor.skirow_distance') }}m
+            in {{ states('sensor.skirow_time_formatted') }}
+            and burned {{ states('sensor.skirow_calories') }} calories.
+
+# Optional: Lovelace Dashboard Card Example
+# Add this to your dashboard configuration:
+#
+# type: entities
+# title: SkiRow Workout
+# entities:
+#   - entity: binary_sensor.skirow_connection
+#     name: Connection
+#   - entity: sensor.skirow_stroke_rate
+#     name: Stroke Rate
+#   - entity: sensor.skirow_power
+#     name: Power
+#   - entity: sensor.skirow_distance
+#     name: Distance
+#   - entity: sensor.skirow_pace_500m
+#     name: Pace (500m)
+#   - entity: sensor.skirow_time_formatted
+#     name: Time
+#   - entity: sensor.skirow_calories
+#     name: Calories
+#   - entity: sensor.skirow_heart_rate
+#     name: Heart Rate
+# state_color: true

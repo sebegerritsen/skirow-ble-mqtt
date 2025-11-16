@@ -1,0 +1,127 @@
+/*
+ * BLE Scanner Test Program
+ *
+ * This is a simple BLE scanner to help you discover what your SkiRow
+ * device is advertising. Use this to find:
+ * - Device name
+ * - MAC address
+ * - Advertised services
+ * - Service UUIDs
+ *
+ * To use this test program:
+ * 1. Temporarily rename src/main.cpp to src/main.cpp.backup
+ * 2. Copy this file to src/main.cpp
+ * 3. Build and upload to your ESP32
+ * 4. Open serial monitor at 115200 baud
+ * 5. Turn on your SkiRow and watch the output
+ * 6. When done, restore the original main.cpp
+ */
+
+#include <Arduino.h>
+#include <NimBLEDevice.h>
+
+NimBLEScan* pBLEScan;
+int scanTime = 5; // Scan for 5 seconds
+
+class AdvertisedDeviceCallbacks: public NimBLEAdvertisedDeviceCallbacks {
+    void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
+        Serial.println("\n========================================");
+        Serial.println("BLE Device Found!");
+        Serial.println("========================================");
+
+        // Device name
+        if (advertisedDevice->haveName()) {
+            Serial.print("Name: ");
+            Serial.println(advertisedDevice->getName().c_str());
+        } else {
+            Serial.println("Name: (no name advertised)");
+        }
+
+        // MAC Address
+        Serial.print("Address: ");
+        Serial.println(advertisedDevice->getAddress().toString().c_str());
+
+        // RSSI (signal strength)
+        Serial.print("RSSI: ");
+        Serial.print(advertisedDevice->getRSSI());
+        Serial.println(" dBm");
+
+        // Manufacturer data
+        if (advertisedDevice->haveManufacturerData()) {
+            Serial.print("Manufacturer Data: ");
+            std::string md = advertisedDevice->getManufacturerData();
+            for (int i = 0; i < md.length(); i++) {
+                Serial.printf("%02X ", (uint8_t)md[i]);
+            }
+            Serial.println();
+        }
+
+        // Service UUIDs
+        if (advertisedDevice->haveServiceUUID()) {
+            Serial.println("Advertised Services:");
+
+            // Check for FTMS service
+            if (advertisedDevice->isAdvertisingService(NimBLEUUID("1826"))) {
+                Serial.println("  ✓ FTMS Service (0x1826) - FITNESS MACHINE!");
+            }
+
+            // List all services
+            for (int i = 0; i < advertisedDevice->getServiceUUIDCount(); i++) {
+                NimBLEUUID uuid = advertisedDevice->getServiceUUID(i);
+                Serial.print("  - ");
+                Serial.println(uuid.toString().c_str());
+            }
+        } else {
+            Serial.println("Services: (none advertised)");
+        }
+
+        // Full advertisement data
+        Serial.print("Full Advertisement: ");
+        Serial.println(advertisedDevice->toString().c_str());
+
+        Serial.println("========================================\n");
+    }
+};
+
+void setup() {
+    Serial.begin(115200);
+    Serial.println("\n\n");
+    Serial.println("╔══════════════════════════════════════╗");
+    Serial.println("║   SkiRow BLE Scanner Test v1.0      ║");
+    Serial.println("╚══════════════════════════════════════╝");
+    Serial.println();
+    Serial.println("This scanner will help you discover your");
+    Serial.println("SkiRow's BLE advertisement data.");
+    Serial.println();
+    Serial.println("Instructions:");
+    Serial.println("1. Turn on your SkiRow rowing machine");
+    Serial.println("2. Make sure it's in pairing/ready mode");
+    Serial.println("3. Watch this screen for BLE devices");
+    Serial.println();
+    Serial.println("Initializing BLE...");
+
+    NimBLEDevice::init("ESP32-Scanner");
+    pBLEScan = NimBLEDevice::getScan();
+    pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks());
+    pBLEScan->setActiveScan(true);
+    pBLEScan->setInterval(100);
+    pBLEScan->setWindow(99);
+
+    Serial.println("BLE initialized!\n");
+}
+
+void loop() {
+    Serial.println("Starting BLE scan (5 seconds)...");
+    Serial.println("----------------------------------------");
+
+    NimBLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+
+    Serial.print("\nScan complete! Found ");
+    Serial.print(foundDevices.getCount());
+    Serial.println(" devices total.\n");
+
+    pBLEScan->clearResults();
+
+    Serial.println("Waiting 5 seconds before next scan...\n");
+    delay(5000);
+}
